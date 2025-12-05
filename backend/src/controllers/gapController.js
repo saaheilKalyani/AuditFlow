@@ -2,6 +2,9 @@ import GapResponse from "../models/GapResponse.js";
 import Project from "../models/Project.js";
 import Control from "../models/Control.js";
 import EvidenceFile from "../models/EvidenceFile.js";
+import { calculateScore } from "../utils/scoring.js";
+import { generateRecommendations } from "../utils/recommendations.js";
+import Framework from "../models/Framework.js";
 
 // GET /api/projects/:id/gap-responses
 export const getGapResponses = async (req, res) => {
@@ -89,6 +92,71 @@ export const updateGapResponse = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating gap response:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// GET /api/projects/:id/gap-summary
+export const getGapSummary = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const userId = req.userId;
+
+    // Get project frameworks
+    const project = await Project.findById(projectId).populate("frameworks");
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Fetch all controls across selected frameworks
+    const controls = await Control.find({
+      frameworkId: { $in: project.frameworks.map((f) => f._id) },
+    });
+
+    const totalControls = controls.length;
+
+    // Get all user responses
+    const responses = await GapResponse.find({ projectId, userId });
+
+    // Missing = controls with NO GapResponse
+    const missing = controls.filter(
+      (c) => !responses.some((r) => r.controlId.toString() === c._id.toString())
+    );
+
+    // Partial = GapResponse with response === PARTIAL
+    const partial = responses
+      .filter((r) => r.response === "PARTIAL")
+      .map((r) => controls.find((c) => c._id.toString() === r.controlId.toString()));
+
+    // Score
+    const score = calculateScore(responses, totalControls);
+
+    // Recommendations
+    const recommendations = generateRecommendations(missing, partial);
+
+    res.json({
+      projectId,
+      frameworks: project.frameworks,
+      totalControls,
+      answered: responses.length,
+      missingControls: missing.length,
+      partialControls: partial.length,
+      score,
+      missing: missing.map((c) => ({
+        id: c._id,
+        controlId: c.controlId,
+        name: c.name,
+      })),
+      partial: partial.map((c) => ({
+        id: c._id,
+        controlId: c.controlId,
+        name: c.name,
+      })),
+      recommendations,
+    });
+  } catch (error) {
+    console.error("Gap Summary Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
