@@ -1,3 +1,8 @@
-export default function Frameworks() {
-  return <div className="p-6 text-xl">Frameworks Page</div>;
-}
+import React from "react";
+import FrameworkList from "../components/Frameworks/FrameworkList";
+
+const Frameworks = () => {
+  return <FrameworkList />;
+};
+
+export default Frameworks;

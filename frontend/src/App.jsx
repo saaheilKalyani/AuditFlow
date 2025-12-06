@@ -25,6 +25,8 @@ function App() {
             <Route path="/dashboard" element={<Home />} />
             <Route path="/gap-analysis" element={<GapAnalysis />} />
             <Route path="/kyo" element={<KYO />} />
+            <Route path="/frameworks" element={<Frameworks />} />
+            <Route path="/frameworks/:id" element={<FrameworkInfo />} />
           </Route>
         </Routes>
       </AuthProvider>
