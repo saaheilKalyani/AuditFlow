@@ -1,25 +1,28 @@
-// Example usage snippet - add into your router setup (do NOT overwrite if you already have App.jsx)
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+
+import Landing from './pages/Landing'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ProtectedRoute from './components/UI/ProtectedRoute'
-import GapAnalysis from './pages/GapAnalysis' // example protected page
+import GapAnalysis from './pages/GapAnalysis'
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Home />} />
             <Route path="/gap-analysis" element={<GapAnalysis />} />
-            {/* add other protected routes here */}
           </Route>
         </Routes>
       </AuthProvider>
