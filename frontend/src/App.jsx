@@ -14,6 +14,8 @@ import Frameworks from './pages/Frameworks'
 import FrameworkInfo from './pages/FrameworkInfo';
 import Mapping from './pages/Mapping';
 import ReportViewer from './pages/ReportViewer'
+import KnowledgeHub from "./pages/KnowledgeHub";
+import Article from "./pages/Article";
 
 
 
@@ -26,6 +28,8 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/knowledge" element={<KnowledgeHub />} />
+          <Route path="/knowledge/:id" element={<Article />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
