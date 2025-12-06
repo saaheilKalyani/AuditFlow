@@ -20,17 +20,12 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate()
 
   const logout = useCallback(() => {
-    clearToken()
-    clearUser()
-    setToken(null)
-    setUser(null)
-    // optional redirect
-    try {
-      navigate('/login')
-    } catch (e) {
-      // swallow if navigation not available
-    }
-  }, [navigate])
+  clearToken();
+  clearUser();
+  setToken(null);
+  setUser(null);
+  navigate("/login"); // always redirect
+}, [navigate]);
 
   // register logout handler for api to call on 401
   useEffect(() => {

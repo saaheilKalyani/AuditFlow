@@ -1,79 +1,82 @@
 // frontend/src/pages/Login.jsx
-import React, { useState, useContext } from 'react'
-import { AuthContext } from '../context/AuthContext'
-import { useNavigate, Link } from 'react-router-dom'
+import React, { useState, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
-  const { login } = useContext(AuthContext)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const navigate = useNavigate()
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
+    e.preventDefault();
+    setErr(null);
+    setLoading(true);
+
     try {
-      await login(email, password)
-      // Redirect to home or dashboard
-      navigate('/')
+      await login(email, password);
+      navigate("/dashboard"); // ⬅ redirect after login
     } catch (err) {
-      const msg = err?.response?.data?.message || err.message || 'Login failed'
-      setError(msg)
-      setLoading(false)
+      setErr(err?.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-md">
-        <h1 className="text-2xl font-semibold mb-4 text-gray-800">Sign in to AuditFlow</h1>
-        {error && (
-          <div className="mb-4 text-sm text-red-700 bg-red-50 p-2 rounded">{error}</div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="w-full max-w-md bg-white border p-6 rounded shadow">
+        <h2 className="text-xl font-semibold mb-4">Login</h2>
+
+        {err && <div className="text-red-600 text-sm mb-3">{err}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm mb-1">Email</label>
             <input
+              className="w-full px-3 py-2 border rounded"
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              placeholder="you@example.com"
+              required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm mb-1">Password</label>
             <input
+              className="w-full px-3 py-2 border rounded"
               type="password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              placeholder="••••••••"
+              required
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 rounded-md bg-indigo-600 text-white font-medium disabled:opacity-60"
+            className="w-full bg-indigo-600 text-white py-2 rounded"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        <div className="mt-4 text-sm text-gray-600">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-indigo-600 hover:underline">
-            Create one
+        <div className="mt-3 text-sm text-gray-600">
+          Don’t have an account?{" "}
+          <Link to="/register" className="text-indigo-600">
+            Register
           </Link>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;
