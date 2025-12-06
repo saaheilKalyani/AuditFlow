@@ -12,6 +12,8 @@ import KYO from './pages/KYO'
 import CreateProject from './pages/CreateProject'
 import Frameworks from './pages/Frameworks'
 import FrameworkInfo from './pages/FrameworkInfo';
+import Mapping from './pages/Mapping';
+
 
 
 function App() {
@@ -32,6 +34,7 @@ function App() {
             <Route path="/frameworks" element={<Frameworks />} />
             <Route path="/frameworks/:id" element={<FrameworkInfo />} />
             <Route path="/create-project" element={<CreateProject />} />
+            <Route path="/mapping/:projectId" element={<Mapping />} />
           </Route>
         </Routes>
       </AuthProvider>
