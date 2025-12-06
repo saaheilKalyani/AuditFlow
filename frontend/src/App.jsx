@@ -9,6 +9,10 @@ import Register from './pages/Register'
 import ProtectedRoute from './components/UI/ProtectedRoute'
 import GapAnalysis from './pages/GapAnalysis'
 import KYO from './pages/KYO'
+import CreateProject from './pages/CreateProject'
+import Frameworks from './pages/Frameworks'
+import FrameworkInfo from './pages/FrameworkInfo';
+
 
 function App() {
   return (
@@ -23,10 +27,11 @@ function App() {
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Home />} />
-            <Route path="/gap-analysis" element={<GapAnalysis />} />
+            <Route path="/gap-analysis/:projectId" element={<GapAnalysis />} />
             <Route path="/kyo" element={<KYO />} />
             <Route path="/frameworks" element={<Frameworks />} />
             <Route path="/frameworks/:id" element={<FrameworkInfo />} />
+            <Route path="/create-project" element={<CreateProject />} />
           </Route>
         </Routes>
       </AuthProvider>
