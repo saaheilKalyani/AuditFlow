@@ -8,6 +8,7 @@ import gapRoutes from "./routes/gap.js";
 import uploadRoutes from "./routes/uploads.js";
 import kyoRoutes from "./routes/kyo.js";
 import mappingRoutes from "./routes/mapping.js";
+import reportRoutes from "./routes/reports.js";
 
 
 dotenv.config();
@@ -25,6 +26,7 @@ app.use("/api/projects", gapRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/kyo", kyoRoutes);
 app.use("/api/mapping", mappingRoutes);
+app.use("/api/reports", reportRoutes);
 
 // Health Check Route
 app.get("/api/health", (req, res) => {
