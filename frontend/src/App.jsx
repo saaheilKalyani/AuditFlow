@@ -13,6 +13,7 @@ import CreateProject from './pages/CreateProject'
 import Frameworks from './pages/Frameworks'
 import FrameworkInfo from './pages/FrameworkInfo';
 import Mapping from './pages/Mapping';
+import ReportViewer from './pages/ReportViewer'
 
 
 
@@ -35,6 +36,7 @@ function App() {
             <Route path="/frameworks/:id" element={<FrameworkInfo />} />
             <Route path="/create-project" element={<CreateProject />} />
             <Route path="/mapping/:projectId" element={<Mapping />} />
+            <Route path="/reports/:projectId" element={<ReportViewer />} />
           </Route>
         </Routes>
       </AuthProvider>
