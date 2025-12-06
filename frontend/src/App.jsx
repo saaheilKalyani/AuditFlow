@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ProtectedRoute from './components/UI/ProtectedRoute'
 import GapAnalysis from './pages/GapAnalysis'
+import KYO from './pages/KYO'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Home />} />
             <Route path="/gap-analysis" element={<GapAnalysis />} />
+            <Route path="/kyo" element={<KYO />} />
           </Route>
         </Routes>
       </AuthProvider>
