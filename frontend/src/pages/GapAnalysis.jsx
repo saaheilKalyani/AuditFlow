@@ -3,26 +3,22 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api";
 import ControlCard from "../components/GapAnalysis/ControlCard";
+import SummaryPanel from "../components/GapAnalysis/SummaryPanel";
 
 /*
-  Flow:
-  - Load project (GET /api/projects/:id) to get selected frameworks
-  - For each framework, load controls (GET /api/frameworks/:id/controls)
-  - Load existing gap responses (GET /api/projects/:id/gap-responses)
-  - Combine controls list into a flat array
-  - Render list (simple UI)
-  - Autosave on every change: POST new response(s) or PATCH existing response
-  - Evidence upload uses POST /api/uploads and DELETE /api/uploads/:fileId
-  - Summary can be fetched from GET /api/projects/:id/gap-summary (optional button)
+  This file extends previous GapAnalysis:
+  - Renders controls (list)
+  - Shows SummaryPanel (score, missing, recommendations, exports) on same page
+  - Uses /api/projects/:id/gap-summary for summary data
 */
 
 const GapAnalysis = () => {
   const { projectId } = useParams();
   const [project, setProject] = useState(null);
-  const [controls, setControls] = useState([]); // each control: { ...controlFields, frameworkId }
-  const [responsesMap, setResponsesMap] = useState({}); // control._id -> response object
+  const [controls, setControls] = useState([]);
+  const [responsesMap, setResponsesMap] = useState({});
   const [loading, setLoading] = useState(true);
-  const [savingMap, setSavingMap] = useState({}); // control._id -> saving boolean
+  const [savingMap, setSavingMap] = useState({});
   const [error, setError] = useState(null);
   const [summary, setSummary] = useState(null);
 
@@ -33,34 +29,28 @@ const GapAnalysis = () => {
       setLoading(true);
       setError(null);
       try {
-        // 1. load project
         const pResp = await api.get(`/api/projects/${projectId}`);
         if (!mounted) return;
         setProject(pResp.data);
 
-        // 2. fetch all controls for each framework
         const frameworkIds = (pResp.data?.frameworks || []).map((f) =>
           typeof f === "string" ? f : f._id
         );
 
         const fetches = frameworkIds.map((fid) =>
-          
           api.get(`/api/frameworks/${fid}/controls`).then((r) => r.data || [])
         );
 
         const controlsByFramework = await Promise.all(fetches);
         if (!mounted) return;
 
-        // flatten with frameworkId tag
         const flat = controlsByFramework.flatMap((arr, idx) =>
           (arr || []).map((c) => ({ ...c, frameworkId: frameworkIds[idx] }))
         );
 
-        // 3. load existing responses for project (only answered ones)
         const respResp = await api.get(`/api/projects/${projectId}/gap-responses`);
         const existing = respResp.data || [];
 
-        // Build map controlId -> response object (if control nested object in response, handle)
         const map = {};
         existing.forEach((r) => {
           const controlRef = typeof r.controlId === "object" ? r.controlId._id : r.controlId;
@@ -69,6 +59,15 @@ const GapAnalysis = () => {
 
         setControls(flat);
         setResponsesMap(map);
+
+        // also load summary upfront
+        try {
+          const sResp = await api.get(`/api/projects/${projectId}/gap-summary`);
+          setSummary(sResp.data || null);
+        } catch (e) {
+          // summary is optional
+          console.warn("Summary load failed", e);
+        }
       } catch (e) {
         console.error("Gap load error", e);
         setError("Failed to load gap analysis data");
@@ -85,15 +84,12 @@ const GapAnalysis = () => {
 
   const handleResponseChange = useCallback(
     async (controlId, partialUpdate) => {
-      // partialUpdate: { response?: 'YES'|'NO'|'PARTIAL', notes?: string, evidenceFiles?: [fileObj] }
-      // set optimistic UI
       setResponsesMap((m) => ({ ...m, [controlId]: { ...(m[controlId] || {}), ...partialUpdate } }));
       setSavingMap((s) => ({ ...s, [controlId]: true }));
 
       try {
         const existing = responsesMap[controlId];
         if (existing && existing._id) {
-          // PATCH existing response
           const patchBody = {};
           if (partialUpdate.response !== undefined) patchBody.response = partialUpdate.response;
           if (partialUpdate.notes !== undefined) patchBody.notes = partialUpdate.notes;
@@ -105,15 +101,19 @@ const GapAnalysis = () => {
           );
           setResponsesMap((m) => ({ ...m, [controlId]: patchResp.data.response || patchResp.data }));
         } else {
-          // POST new response - API expects { responses: [ { controlId, response, notes } ] }
-          const body = { responses: [{ controlId, response: partialUpdate.response || null, notes: partialUpdate.notes || '' }] };
+          const body = { responses: [{ controlId, response: partialUpdate.response || null, notes: partialUpdate.notes || "" }] };
           const postResp = await api.post(`/api/projects/${projectId}/gap-responses`, body);
-          // server returns responses array (created)
           const created = postResp.data?.responses || [];
           if (created.length > 0) {
-            const createdOne = created[0];
-            setResponsesMap((m) => ({ ...m, [controlId]: createdOne }));
+            setResponsesMap((m) => ({ ...m, [controlId]: created[0] }));
           }
+        }
+        // refresh summary after change
+        try {
+          const sResp = await api.get(`/api/projects/${projectId}/gap-summary`);
+          setSummary(sResp.data || null);
+        } catch (e) {
+          // ignore
         }
       } catch (err) {
         console.error("Autosave error", err);
@@ -130,36 +130,37 @@ const GapAnalysis = () => {
     [projectId, responsesMap]
   );
 
-  // Evidence upload helper - appends projectId to formdata if needed
   const handleUpload = async (controlId, file) => {
     setSavingMap((s) => ({ ...s, [controlId]: true }));
     try {
       const fd = new FormData();
       fd.append("file", file);
-      // include projectId so backend can attach
       fd.append("projectId", projectId);
       const upResp = await api.post("/api/uploads", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       const files = upResp.data?.files || [];
-      // If created file entry(s) exist, add their _id to evidenceFiles and save via PATCH or POST
       const fileIds = files.map((f) => f._id);
 
       const existing = responsesMap[controlId];
       if (existing && existing._id) {
-        // append to evidenceFiles
         const newEvidence = [...(existing.evidenceFiles || []), ...fileIds];
         const patchResp = await api.patch(`/api/projects/${projectId}/gap-responses/${existing._id}`, {
           evidenceFiles: newEvidence,
         });
         setResponsesMap((m) => ({ ...m, [controlId]: patchResp.data.response || patchResp.data }));
       } else {
-        // create new with evidenceFiles
-        const body = { responses: [{ controlId, response: null, notes: '', evidenceFiles: fileIds }] };
+        const body = { responses: [{ controlId, response: null, notes: "", evidenceFiles: fileIds }] };
         const postResp = await api.post(`/api/projects/${projectId}/gap-responses`, body);
         const created = postResp.data?.responses || [];
         if (created.length > 0) setResponsesMap((m) => ({ ...m, [controlId]: created[0] }));
       }
+
+      // refresh summary
+      try {
+        const sResp = await api.get(`/api/projects/${projectId}/gap-summary`);
+        setSummary(sResp.data || null);
+      } catch (e) {}
     } catch (err) {
       console.error("Upload error", err);
       setError("File upload failed");
@@ -175,7 +176,6 @@ const GapAnalysis = () => {
   const handleDeleteFile = async (controlId, fileId) => {
     setSavingMap((s) => ({ ...s, [controlId]: true }));
     try {
-      // delete from server
       await api.delete(`/api/uploads/${fileId}`);
       const existing = responsesMap[controlId];
       if (existing && existing._id) {
@@ -185,6 +185,12 @@ const GapAnalysis = () => {
         });
         setResponsesMap((m) => ({ ...m, [controlId]: patchResp.data.response || patchResp.data }));
       }
+
+      // refresh summary
+      try {
+        const sResp = await api.get(`/api/projects/${projectId}/gap-summary`);
+        setSummary(sResp.data || null);
+      } catch (e) {}
     } catch (err) {
       console.error("Delete file error", err);
       setError("Failed to delete file");
@@ -225,6 +231,10 @@ const GapAnalysis = () => {
         </div>
       </div>
 
+      <div className="mb-6">
+        <SummaryPanel projectId={projectId} summary={summary} />
+      </div>
+
       <div className="space-y-4">
         {controls.map((c) => (
           <ControlCard
@@ -237,25 +247,6 @@ const GapAnalysis = () => {
             saving={!!savingMap[c._id]}
           />
         ))}
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">Recommendations / Summary</h2>
-        {summary ? (
-          <div className="bg-white border p-4 rounded">
-            <div className="text-sm mb-2">Score: {summary.score}</div>
-            <div className="text-sm text-gray-700">
-              Missing controls: {summary.missingControls}
-            </div>
-            <div className="mt-3">
-              {summary.recommendations?.map((r, idx) => (
-                <div key={idx} className="text-sm py-1 border-b last:border-b-0">{r.message}</div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-600">No summary yet. Click "Refresh Summary".</div>
-        )}
       </div>
     </div>
   );
